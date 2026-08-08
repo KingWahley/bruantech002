@@ -35,7 +35,7 @@ export default function BlogCMSPage() {
   const handleDeleteConfirm = async () => {
     if (!deleteModal.postId) return;
     setIsDeleting(true);
-    const res = await deleteBlogPost(deleteModal.postId);
+    const res = await deleteBlogPost(deleteModal.postId, true);
     setIsDeleting(false);
 
     if (res?.error) {

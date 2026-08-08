@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { projectSchema, ProjectFormValues } from '@/lib/validations/project';
 import ImageUploader from '@/components/dashboard/upload/ImageUploader';
 import ConfirmModal from '@/components/dashboard/ui/ConfirmModal';
-import { createProject, updateProject } from '@/lib/actions/projects';
+import { createProject, updateProject, getProjectCategories } from '@/lib/actions/projects';
 import { slugify } from '@/lib/utils';
 import { ArrowLeft, Save, Trash2, Plus, X, Globe, Layers, Cpu, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -18,7 +18,6 @@ interface ProjectFormProps {
   isEditing?: boolean;
 }
 
-const CATEGORY_OPTIONS = ['Web Design', 'App Design', 'E-Commerce', 'Cloud Engineering'];
 
 const DEFAULT_TECH = [
   'JavaScript',
@@ -39,12 +38,21 @@ export default function ProjectForm({ initialData, isEditing = false }: ProjectF
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [deliverableInput, setDeliverableInput] = useState('');
+  const [techInput, setTechInput] = useState('');
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(['Web Design', 'App Design', 'E-Commerce', 'Cloud Engineering']);
+  const [categoryInput, setCategoryInput] = useState('');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   const defaultValues: ProjectFormValues = {
     title: initialData?.title || '',
     slug: initialData?.slug || '',
-    category: initialData?.category || 'Web Design',
+    category: initialData?.categories?.[0] || initialData?.category || 'Web Design',
+    categories: (
+      Array.isArray(initialData?.categories) && initialData.categories.length > 0
+        ? initialData.categories
+        : initialData?.category ? [initialData.category] : ['Web Design']
+    ),
     client: initialData?.client || '',
     location: initialData?.location || '',
     description: initialData?.description || '',
@@ -69,11 +77,39 @@ export default function ProjectForm({ initialData, isEditing = false }: ProjectF
 
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
 
+  React.useEffect(() => {
+    getProjectCategories().then(setCategoryOptions);
+  }, []);
+
   const currentTitle = watch('title');
   const currentSlug = watch('slug');
+  const currentCategories = watch('categories') || [];
   const currentDeliverables = watch('deliverables') || [];
   const currentTechStack = watch('techStack') || [];
   const currentProcess = watch('process') || [];
+
+  const handleAddCategory = (cat: string) => {
+    const trimmed = cat.trim();
+    if (!trimmed) return;
+    if (currentCategories.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error(`"${trimmed}" is already added.`);
+      return;
+    }
+    const next = [...currentCategories, trimmed];
+    setValue('categories', next);
+    setValue('category', next[0]);
+    // Persist new custom options locally
+    if (!categoryOptions.some((o) => o.toLowerCase() === trimmed.toLowerCase())) {
+      setCategoryOptions((prev) => Array.from(new Set([...prev, trimmed])).sort());
+    }
+    setCategoryInput('');
+  };
+
+  const handleRemoveCategory = (cat: string) => {
+    const next = currentCategories.filter((c) => c !== cat);
+    setValue('categories', next);
+    setValue('category', next[0] || '');
+  };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -84,8 +120,13 @@ export default function ProjectForm({ initialData, isEditing = false }: ProjectF
   };
 
   const handleAddDeliverable = () => {
-    if (!deliverableInput.trim()) return;
-    setValue('deliverables', [...currentDeliverables, deliverableInput.trim()]);
+    const trimmed = deliverableInput.trim();
+    if (!trimmed) return;
+    if (currentDeliverables.some((d) => d.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error(`"${trimmed}" is already in the deliverables list.`);
+      return;
+    }
+    setValue('deliverables', [...currentDeliverables, trimmed]);
     setDeliverableInput('');
   };
 
@@ -100,6 +141,17 @@ export default function ProjectForm({ initialData, isEditing = false }: ProjectF
     } else {
       setValue('techStack', [...currentTechStack, { name: techName, icon: '' }]);
     }
+  };
+
+  const handleAddCustomTech = () => {
+    const trimmed = techInput.trim();
+    if (!trimmed) return;
+    if (currentTechStack.some((t) => t.name.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error(`"${trimmed}" is already in the tech stack.`);
+      return;
+    }
+    setValue('techStack', [...currentTechStack, { name: trimmed, icon: '' }]);
+    setTechInput('');
   };
 
   const handleAddProcessParagraph = () => {
@@ -339,26 +391,78 @@ export default function ProjectForm({ initialData, isEditing = false }: ProjectF
               Technologies Used
             </h2>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {DEFAULT_TECH.map((techName) => {
-                const isSelected = currentTechStack.some((t) => t.name === techName);
-                return (
-                  <button
-                    key={techName}
-                    type="button"
-                    onClick={() => handleToggleTech(techName)}
-                    className={`px-3 py-2 rounded-xl text-xs font-medium border text-left transition-all ${
-                      isSelected
-                        ? 'bg-teal-500/10 border-teal-500/30 text-teal-400 font-semibold'
-                        : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
-                    }`}
-                  >
-                    {isSelected ? '✓ ' : '+ '}
-                    {techName}
-                  </button>
-                );
-              })}
+            {/* Custom tech input */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-zinc-300">Add Custom Technology</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={techInput}
+                  onChange={(e) => setTechInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomTech(); } }}
+                  placeholder="e.g. Prisma, Figma, AWS Lambda…"
+                  className="flex-1 px-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-200 focus:outline-none focus:border-teal-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustomTech}
+                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold rounded-xl transition-colors flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" /> Add
+                </button>
+              </div>
             </div>
+
+            {/* Preset toggles */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-zinc-300">Quick-select</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {DEFAULT_TECH.map((techName) => {
+                  const isSelected = currentTechStack.some((t) => t.name === techName);
+                  return (
+                    <button
+                      key={techName}
+                      type="button"
+                      onClick={() => handleToggleTech(techName)}
+                      className={`px-3 py-2 rounded-xl text-xs font-medium border text-left transition-all ${
+                        isSelected
+                          ? 'bg-teal-500/10 border-teal-500/30 text-teal-400 font-semibold'
+                          : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      {isSelected ? '✓ ' : '+ '}
+                      {techName}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom (non-preset) tech pills */}
+            {currentTechStack.filter((t) => !DEFAULT_TECH.includes(t.name)).length > 0 && (
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-zinc-300">Custom Additions</label>
+                <div className="flex flex-wrap gap-2">
+                  {currentTechStack
+                    .filter((t) => !DEFAULT_TECH.includes(t.name))
+                    .map((t) => (
+                      <span
+                        key={t.name}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-lg text-xs font-medium"
+                      >
+                        {t.name}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTech(t.name)}
+                          className="hover:text-cyan-200"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Card: Image Gallery */}
@@ -386,19 +490,76 @@ export default function ProjectForm({ initialData, isEditing = false }: ProjectF
               Publishing Options
             </h3>
 
-            {/* Category */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-zinc-300">Category</label>
-              <select
-                {...register('category')}
-                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-teal-500"
-              >
-                {CATEGORY_OPTIONS.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+            {/* Categories – multi-tag */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-zinc-300">Categories</label>
+
+              {/* Selected tags */}
+              {currentCategories.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {currentCategories.map((cat) => (
+                    <span
+                      key={cat}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-400 rounded-lg text-xs font-medium"
+                    >
+                      {cat}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCategory(cat)}
+                        className="hover:text-teal-200"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Combobox input */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={categoryInput}
+                  onChange={(e) => {
+                    setCategoryInput(e.target.value);
+                    setShowCategoryDropdown(true);
+                  }}
+                  onFocus={() => setShowCategoryDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 150)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCategory(categoryInput); } }}
+                  placeholder="Add a category…"
+                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-teal-500"
+                />
+                {showCategoryDropdown && (
+                  <ul className="absolute z-20 top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden shadow-xl max-h-48 overflow-y-auto">
+                    {categoryOptions
+                      .filter((opt) =>
+                        !currentCategories.includes(opt) &&
+                        (!categoryInput.trim() || opt.toLowerCase().includes(categoryInput.toLowerCase()))
+                      )
+                      .map((opt) => (
+                        <li
+                          key={opt}
+                          onMouseDown={() => handleAddCategory(opt)}
+                          className="px-3 py-2 text-xs cursor-pointer text-zinc-300 hover:bg-zinc-800 transition-colors"
+                        >
+                          {opt}
+                        </li>
+                      ))}
+                    {categoryInput.trim() &&
+                      !categoryOptions.some(
+                        (o) => o.toLowerCase() === categoryInput.trim().toLowerCase()
+                      ) && (
+                        <li
+                          onMouseDown={() => handleAddCategory(categoryInput)}
+                          className="px-3 py-2 text-xs cursor-pointer text-teal-400 hover:bg-zinc-800 border-t border-zinc-700 flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" /> Create &ldquo;{categoryInput.trim()}&rdquo;
+                        </li>
+                      )}
+                  </ul>
+                )}
+              </div>
             </div>
 
             {/* Status */}

@@ -6,6 +6,18 @@ import { revalidatePath } from 'next/cache';
 import { logActivity } from './activity';
 import { ProjectFormValues } from '../validations/project';
 
+/** Ensures every project always has a `categories` string[] regardless of
+ *  whether the DB row was saved before multi-category support was added. */
+function normaliseProject(p: any) {
+  const cats: string[] =
+    Array.isArray(p.categories) && p.categories.length > 0
+      ? p.categories
+      : p.category
+        ? [p.category]
+        : [];
+  return { ...p, categories: cats };
+}
+
 export async function getProjects(options?: { status?: string; includeDeleted?: boolean }) {
   try {
     let supabase;
@@ -36,6 +48,7 @@ export async function getProjects(options?: { status?: string; includeDeleted?: 
         slug: item.slug,
         description: item.description || '',
         category: item.category || 'Web Design',
+        categories: item.categories || [item.category || 'Web Design'],
         client: item.client || 'Client',
         location: item.location || 'Nigeria',
         deliverables: item.deliverables || ['Web Design', 'Development'],
@@ -49,7 +62,7 @@ export async function getProjects(options?: { status?: string; includeDeleted?: 
       }));
     }
 
-    return data || [];
+    return data ? data.map(normaliseProject) : [];
   } catch (err) {
     console.error('Error fetching projects:', err);
     return caseStudiesData.map((item: any, idx: number) => ({
@@ -58,6 +71,7 @@ export async function getProjects(options?: { status?: string; includeDeleted?: 
       slug: item.slug,
       description: item.description || '',
       category: item.category || 'Web Design',
+        categories: item.categories || [item.category || 'Web Design'],
       client: item.client || 'Client',
       location: item.location || 'Nigeria',
       deliverables: item.deliverables || ['Web Design'],
@@ -196,7 +210,8 @@ export async function createProject(values: ProjectFormValues) {
   const payload = {
     title: values.title,
     slug: values.slug,
-    category: values.category,
+    categories: values.categories?.length ? values.categories : (values.category ? [values.category] : ['Web Design']),
+    category: values.categories?.[0] || values.category || 'Web Design',
     client: values.client || '',
     location: values.location || '',
     description: values.description || '',
@@ -238,7 +253,8 @@ export async function updateProject(id: string, values: ProjectFormValues) {
   const payload = {
     title: values.title,
     slug: values.slug,
-    category: values.category,
+    categories: values.categories?.length ? values.categories : (values.category ? [values.category] : ['Web Design']),
+    category: values.categories?.[0] || values.category || 'Web Design',
     client: values.client || '',
     location: values.location || '',
     description: values.description || '',
@@ -342,3 +358,30 @@ export async function toggleFeaturedProject(id: string, currentFeatured: boolean
   return { success: true };
 }
 
+/** Returns every distinct category that exists in the DB, merged with the
+ *  built-in defaults, deduplicated and sorted alphabetically. */
+export async function getProjectCategories(): Promise<string[]> {
+  const DEFAULTS = ['Web Design', 'App Design', 'E-Commerce', 'Cloud Engineering'];
+  try {
+    let supabase;
+    try {
+      supabase = await createClient();
+    } catch {
+      supabase = createPublicClient();
+    }
+    const { data } = await supabase
+      .from('projects')
+      .select('category, categories')
+      .is('deleted_at', null);
+
+    const fromDb: string[] = (data ?? []).flatMap((r: any) => {
+      if (Array.isArray(r.categories) && r.categories.length > 0) return r.categories;
+      return r.category ? [r.category] : [];
+    }).filter(Boolean);
+
+    const merged = Array.from(new Set([...DEFAULTS, ...fromDb])).sort();
+    return merged;
+  } catch {
+    return DEFAULTS;
+  }
+}

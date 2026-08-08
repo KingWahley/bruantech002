@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { caseStudyCategories, caseStudiesData } from '@/constants';
+import { caseStudiesData } from '@/constants';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -18,14 +18,31 @@ export default function CaseStudiesGrid({ projects }: CaseStudiesGridProps) {
 
   const ITEMS_PER_PAGE = 6;
 
-  const categories = ["All", ...caseStudyCategories.filter(c => c !== "All")];
+  // Build category list from actual project data — reads the categories array,
+  // falls back to category string for rows saved before multi-category support.
+  const categories = [
+    'All',
+    ...Array.from(
+      new Set(
+        allProjects.flatMap((p: any) =>
+          Array.isArray(p.categories) && p.categories.length > 0
+            ? p.categories
+            : p.category ? [p.category] : []
+        )
+      )
+    ).sort() as string[],
+  ];
 
-  const filteredProjects = 
-    activeCategory === "All" 
-    ? allProjects 
-    : allProjects.filter(
-      (project) => project.category === activeCategory
-    );
+  const filteredProjects =
+    activeCategory === 'All'
+    ? allProjects
+    : allProjects.filter((project: any) => {
+        const cats: string[] =
+          Array.isArray(project.categories) && project.categories.length > 0
+            ? project.categories
+            : project.category ? [project.category] : [];
+        return cats.includes(activeCategory);
+      });
 
   const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE) || 1;
 
@@ -62,7 +79,8 @@ export default function CaseStudiesGrid({ projects }: CaseStudiesGridProps) {
             </div>
           </div>
           
-          {/* Active Filter Chips */}
+          {/* Active Filter Chips — only visible when a filter is applied */}
+          {activeCategory !== 'All' && (
           <div className="flex items-center gap-4 text-sm text-gray-500">
             <span className="flex items-center gap-2 border border-gray-300 rounded-full px-4 py-1.5 bg-white">
               {activeCategory}
@@ -85,6 +103,7 @@ export default function CaseStudiesGrid({ projects }: CaseStudiesGridProps) {
               Remove filters
             </span>
           </div>
+          )}
         </div>
 
         {/* Grid */}

@@ -63,7 +63,7 @@ export default function MessagesPage() {
   const handleDeleteSingle = async () => {
     if (!deleteModal.messageId) return;
     setIsDeleting(true);
-    const res = await deleteMessage(deleteModal.messageId);
+    const res = await deleteMessage(deleteModal.messageId, true);
     setIsDeleting(false);
 
     if (res?.error) {

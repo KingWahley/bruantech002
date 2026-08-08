@@ -36,7 +36,7 @@ export default function ProjectsPage() {
   const handleDeleteConfirm = async () => {
     if (!deleteModal.projectId) return;
     setIsDeleting(true);
-    const res = await deleteProject(deleteModal.projectId);
+    const res = await deleteProject(deleteModal.projectId, true);
     setIsDeleting(false);
 
     if (res?.error) {

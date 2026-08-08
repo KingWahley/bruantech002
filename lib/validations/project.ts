@@ -4,6 +4,7 @@ export const projectSchema = z.object({
   title: z.string().min(2, 'Title is required'),
   slug: z.string().min(2, 'Slug is required'),
   category: z.string().optional(),
+  categories: z.array(z.string()).optional(),
   client: z.string().optional(),
   location: z.string().optional(),
   description: z.string().optional(),

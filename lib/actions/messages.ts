@@ -87,18 +87,22 @@ export async function updateMessageStatus(id: string, status: 'unread' | 'read' 
   return { success: true };
 }
 
-export async function deleteMessage(id: string) {
+export async function deleteMessage(id: string, permanent = false) {
   const supabase = await createClient();
 
-  const { error } = await supabase
-    .from('messages')
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('id', id);
-
-  if (error) return { error: error.message };
+  if (permanent) {
+    const { error } = await supabase.from('messages').delete().eq('id', id);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase
+      .from('messages')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) return { error: error.message };
+  }
 
   await logActivity({
-    action: 'MESSAGE_DELETED',
+    action: permanent ? 'MESSAGE_PERMANENT_DELETED' : 'MESSAGE_DELETED',
     entityType: 'message',
     entityId: id,
   });
@@ -111,10 +115,7 @@ export async function bulkUpdateMessages(ids: string[], action: 'read' | 'unread
   const supabase = await createClient();
 
   if (action === 'delete') {
-    const { error } = await supabase
-      .from('messages')
-      .update({ deleted_at: new Date().toISOString() })
-      .in('id', ids);
+    const { error } = await supabase.from('messages').delete().in('id', ids);
     if (error) return { error: error.message };
   } else {
     const targetStatus = action === 'archive' ? 'archived' : action;
