@@ -1,7 +1,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { getSiteSettings } from '@/lib/actions/settings';
 
-export default function Footer() {
+export default async function Footer() {
+  const settings = await getSiteSettings();
+
   const footerLinks = [
     { name: "Home", href: "/" },
     { name: "Company", href: "/company" },
@@ -33,8 +36,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-[#242627] text-base md:text-lg leading-relaxed">
-              Keep your business running smoothly <br className="hidden md:block" />
-              with dependable IT solutions
+              {settings?.siteDescription || "Keep your business running smoothly with dependable IT solutions"}
             </p>
           </div>
 
@@ -54,7 +56,7 @@ export default function Footer() {
 
         {/* Bottom Section: Copyright & Legal */}
         <div className="w-full pt-4 md:pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400">
-          <p>© {new Date().getFullYear()} Bruantech. All rights reserved.</p>
+          <p>{settings?.footerText || `© ${new Date().getFullYear()} Bruantech. All rights reserved.`}</p>
           
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="hover:text-[#5EB3C3] transition-colors">

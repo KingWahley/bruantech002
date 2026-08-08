@@ -120,7 +120,7 @@ export default function ProjectForm({ initialData, isEditing = false }: ProjectF
     setSubmitting(true);
     let result;
 
-    if (isEditing && initialData?.id) {
+    if (isEditing && initialData?.id && !initialData.id.startsWith('mock-')) {
       result = await updateProject(initialData.id, values);
     } else {
       result = await createProject(values);
@@ -131,7 +131,7 @@ export default function ProjectForm({ initialData, isEditing = false }: ProjectF
     if (result?.error) {
       toast.error(result.error);
     } else {
-      toast.success(isEditing ? 'Project updated successfully' : 'Project created successfully');
+      toast.success(isEditing ? 'Project saved successfully' : 'Project created successfully');
       router.push('/dashboard/projects');
       router.refresh();
     }

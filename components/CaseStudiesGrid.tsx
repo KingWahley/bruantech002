@@ -7,20 +7,27 @@ import { caseStudyCategories, caseStudiesData } from '@/constants';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 
-export default function CaseStudiesGrid() {
-  const [activeCategory, setActiveCategory] = useState("App Design");
+interface CaseStudiesGridProps {
+  projects?: any[];
+}
+
+export default function CaseStudiesGrid({ projects }: CaseStudiesGridProps) {
+  const allProjects = projects && projects.length > 0 ? projects : caseStudiesData;
+  const [activeCategory, setActiveCategory] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
 
   const ITEMS_PER_PAGE = 6;
 
+  const categories = ["All", ...caseStudyCategories.filter(c => c !== "All")];
+
   const filteredProjects = 
     activeCategory === "All" 
-    ? caseStudiesData 
-    : caseStudiesData.filter(
+    ? allProjects 
+    : allProjects.filter(
       (project) => project.category === activeCategory
     );
 
-  const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE) || 1;
 
   const paginatedProjects = filteredProjects.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -36,7 +43,7 @@ export default function CaseStudiesGrid() {
           {/* Main Category Tabs */}
           <div className="overflow-x-auto md:overflow-x-visible no-scrollbar">
             <div className="inline-flex border border-black rounded-lg overflow-hidden whitespace-nowrap">
-              {caseStudyCategories.map((cat, idx) => (
+              {categories.map((cat, idx) => (
                 <button
                   key={cat}
                   onClick={() => {
@@ -82,74 +89,89 @@ export default function CaseStudiesGrid() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {paginatedProjects.map((project, index) => (
-            <motion.div
-              key={project.slug}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Link 
-                href={`/case-studies/${project.slug}`}
-                className="flex flex-col border-3 border-black rounded-3xl overflow-hidden h-full group hover:shadow-xl transition-all duration-300"
+          {paginatedProjects.map((project, index) => {
+            const imgSrc = typeof project.image === 'string'
+              ? project.image || '/images/default.jpg'
+              : project.image?.src || '/images/default.jpg';
+
+            const maxChar = 120;
+            const descriptionText = project.description || '';
+            const truncatedDescription = descriptionText.length > maxChar
+              ? `${descriptionText.slice(0, maxChar).trim()}...`
+              : descriptionText;
+
+            return (
+              <motion.div
+                key={project.id || project.slug || index}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="h-full"
               >
-                {/* Text Content */}
-                <div className="p-6 flex flex-col gap-2 grow bg-white">
-                  <h3 className="text-xl md:text-3xl font-extrabold font-mono text-black group-hover:text-[#5EB3C3] transition-colors">
-                    {project.title}
-                  </h3>
-                  <p className="text-black text-base md:text-lg leading-relaxed">
-                    {project.description}
-                  </p>
-                </div>
-                {/* Bottom Image */}
-                <div className="relative w-full aspect-video bg-gray-100">
-                  <Image 
-                    src={project.image}
-                    alt={project.title}
-                    fill
-                    className="object-cover group-hover:scale-102 duration-300"
-                  />
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+                <Link 
+                  href={`/case-studies/${project.slug}`}
+                  className="flex flex-col justify-between border-3 border-black rounded-3xl overflow-hidden h-full group hover:shadow-xl transition-all duration-300"
+                >
+                  {/* Text Content */}
+                  <div className="p-6 flex flex-col gap-2 grow bg-white min-h-[170px]">
+                    <h3 className="text-xl md:text-2xl font-extrabold font-mono text-black group-hover:text-[#5EB3C3] transition-colors line-clamp-2">
+                      {project.title}
+                    </h3>
+                    <p className="text-black text-sm md:text-base leading-relaxed line-clamp-3">
+                      {truncatedDescription}
+                    </p>
+                  </div>
+                  {/* Bottom Image */}
+                  <div className="relative w-full aspect-video bg-gray-100 shrink-0">
+                    <Image 
+                      src={imgSrc}
+                      alt={project.title || 'Case Study'}
+                      fill
+                      className="object-cover group-hover:scale-102 duration-300"
+                    />
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
         </div>
 
-        <div className="flex justify-center mt-12">
-          <div className="inline-flex items-center border-2 border-black rounded-lg overflow-hidden">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => p - 1)}
-              className="px-6 py-3 bg-black text-white disabled:opacity-40"
-            >
-              Previous
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => (
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-12">
+            <div className="inline-flex items-center border-2 border-black rounded-lg overflow-hidden">
               <button
-                key={i}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`px-5 py-3 border-l border-black ${
-                  currentPage === i + 1
-                    ? "bg-[#5EB3C3] text-white"
-                    : "bg-white hover:bg-gray-100"
-                }`}
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+                className="px-6 py-3 bg-black text-white disabled:opacity-40"
               >
-                {i + 1}
+                Previous
               </button>
-            ))}
 
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => p + 1)}
-              className="px-6 py-3 bg-black text-white disabled:opacity-40"
-            >
-              Next
-            </button>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`px-5 py-3 border-l border-black ${
+                    currentPage === i + 1
+                      ? "bg-[#5EB3C3] text-white"
+                      : "bg-white hover:bg-gray-100"
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+                className="px-6 py-3 bg-black text-white disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

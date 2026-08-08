@@ -6,8 +6,13 @@ import { motion } from 'framer-motion';
 import { Phone, Mail, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { SiteSettingsFormValues } from '@/lib/validations/settings';
 
-export default function ContactHero() {
+interface ContactHeroProps {
+  settings?: Partial<SiteSettingsFormValues>;
+}
+
+export default function ContactHero({ settings = {} }: ContactHeroProps) {
   const customEase = [0.16, 1, 0.3, 1] as any;
 
   // Form State Management
@@ -71,6 +76,20 @@ export default function ContactHero() {
     }
   };
 
+  const formatExternalUrl = (url?: string) => {
+    if (!url || url === '#' || url.trim() === '') return '#';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+    return `https://${trimmed}`;
+  };
+
+  const phone = settings.phoneNumber || '+123456780';
+  const email = settings.contactEmail || 'Brume@gmail.com';
+  const address = settings.address || '132 address lagos Nigeria';
+  const twitterUrl = formatExternalUrl(settings.twitterUrl);
+  const instagramUrl = formatExternalUrl(settings.instagramUrl);
+  const discordUrl = formatExternalUrl(settings.discordUrl);
+
   return (
     <section className="w-full relative pt-8 md:pt-14 pb-2 md:pb-20 z-0">
       {/* Background Pastel Block */}
@@ -118,29 +137,29 @@ export default function ContactHero() {
             </h3>
             
             <div className="flex flex-col gap-4 md:gap-6 relative z-10">
-              <a href="tel:+123456780" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
-                <Phone className="w-6 h-6" />
-                <span className="text-lg font-light">+123456780</span>
+              <a href={`tel:${phone}`} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+                <Phone className="w-6 h-6 shrink-0" />
+                <span className="text-lg font-light">{phone}</span>
               </a>
-              <a href="mailto:Brume@gmail.com" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
-                <Mail className="w-6 h-6" />
-                <span className="text-lg font-light">Brume@gmail.com</span>
+              <a href={`mailto:${email}`} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+                <Mail className="w-6 h-6 shrink-0" />
+                <span className="text-lg font-light">{email}</span>
               </a>
               <div className="flex items-center gap-4">
                 <MapPin className="w-6 h-6 shrink-0" />
-                <span className="text-lg font-light">132 address lagos Nigeria</span>
+                <span className="text-lg font-light">{address}</span>
               </div>
             </div>
 
             {/* Social Icons */}
             <div className="flex items-center gap-4 pt-6 md:pt-10 relative z-10">
-              <a href="#" className="relative w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+              <a href={twitterUrl} target="_blank" rel="noopener noreferrer" className="relative w-10 h-10 rounded-full flex items-center justify-center transition-opacity hover:opacity-80">
                 <Image src={images.twittericon} alt='Twitter icon' fill />
               </a>
-              <a href="#" className="relative w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+              <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="relative w-10 h-10 rounded-full flex items-center justify-center transition-opacity hover:opacity-80">
                 <Image src={images.igicon} alt='Instagram icon' fill />
               </a>
-              <a href="#" className="relative w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+              <a href={discordUrl} target="_blank" rel="noopener noreferrer" className="relative w-10 h-10 rounded-full flex items-center justify-center transition-opacity hover:opacity-80">
                 <Image src={images.discordicon} alt='Discord icon' className='w-10 h-10 object-contain'/>
               </a>
             </div>

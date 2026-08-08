@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import Image from 'next/image';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -14,50 +13,123 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ExternalLink,
+  Plus,
+  List,
 } from 'lucide-react';
 import { logout } from '@/lib/actions/auth';
 import ConfirmModal from '../ui/ConfirmModal';
 
 interface SidebarProps {
   unreadMessagesCount?: number;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export default function Sidebar({ unreadMessagesCount = 0 }: SidebarProps) {
+interface SubMenuItem {
+  name: string;
+  href: string;
+  icon?: React.ElementType;
+}
+
+interface NavItem {
+  id: string;
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  exact?: boolean;
+  badge?: number;
+  subItems?: SubMenuItem[];
+}
+
+export default function Sidebar({
+  unreadMessagesCount = 0,
+  collapsed: externalCollapsed,
+  onToggleCollapse,
+}: SidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const collapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
+
+  const handleToggleCollapse = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    } else {
+      setInternalCollapsed(!internalCollapsed);
+    }
+  };
+
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const navItems = [
+  // Track expanded state for submenus (projects & blog)
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
+    projects: pathname.startsWith('/dashboard/projects'),
+    blog: pathname.startsWith('/dashboard/blog'),
+  });
+
+  // Auto-expand active submenus on path change
+  useEffect(() => {
+    if (pathname.startsWith('/dashboard/projects')) {
+      setExpandedMenus((prev) => ({ ...prev, projects: true }));
+    }
+    if (pathname.startsWith('/dashboard/blog')) {
+      setExpandedMenus((prev) => ({ ...prev, blog: true }));
+    }
+  }, [pathname]);
+
+  const toggleSubmenu = (id: string) => {
+    setExpandedMenus((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const navItems: NavItem[] = [
     {
+      id: 'overview',
       name: 'Overview',
       href: '/dashboard',
       icon: LayoutDashboard,
       exact: true,
     },
     {
+      id: 'projects',
       name: 'Projects',
       href: '/dashboard/projects',
       icon: FolderKanban,
+      subItems: [
+        { name: 'Project List', href: '/dashboard/projects', icon: List },
+        { name: 'New Project', href: '/dashboard/projects/new', icon: Plus },
+      ],
     },
     {
+      id: 'blog',
       name: 'Blog CMS',
       href: '/dashboard/blog',
       icon: FileText,
+      subItems: [
+        { name: 'Blog Posts', href: '/dashboard/blog', icon: List },
+        { name: 'Write a Blog', href: '/dashboard/blog/new', icon: Plus },
+      ],
     },
     {
+      id: 'messages',
       name: 'Messages',
       href: '/dashboard/messages',
       icon: Mail,
       badge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined,
     },
     {
+      id: 'activity',
       name: 'Activity Logs',
       href: '/dashboard/activity',
       icon: Activity,
     },
     {
+      id: 'settings',
       name: 'Settings',
       href: '/dashboard/settings',
       icon: Settings,
@@ -94,7 +166,7 @@ export default function Sidebar({ unreadMessagesCount = 0 }: SidebarProps) {
             )}
           </Link>
           <button
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={handleToggleCollapse}
             className="text-zinc-400 hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-900 transition-colors"
             title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
@@ -103,42 +175,100 @@ export default function Sidebar({ unreadMessagesCount = 0 }: SidebarProps) {
         </div>
 
         {/* Navigation Items */}
-        <div className="flex-1 py-4 px-3 flex flex-col gap-1 overflow-y-auto">
+        <div className="flex-1 py-4 px-3 flex flex-col gap-1 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => {
             const isActive = item.exact
               ? pathname === item.href
               : pathname.startsWith(item.href);
             const Icon = item.icon;
+            const hasSubmenu = Boolean(item.subItems && item.subItems.length > 0);
+            const isExpanded = expandedMenus[item.id];
 
             return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all group relative ${
-                  isActive
-                    ? 'bg-zinc-800 text-white font-semibold shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/80'
-                }`}
-                title={collapsed ? item.name : undefined}
-              >
-                <Icon
-                  className={`w-5 h-5 shrink-0 transition-colors ${
-                    isActive ? 'text-teal-400' : 'text-zinc-400 group-hover:text-zinc-200'
-                  }`}
-                />
-                {!collapsed && <span className="flex-1">{item.name}</span>}
-
-                {/* Unread badge */}
-                {item.badge !== undefined && (
-                  <span
-                    className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                      collapsed ? 'absolute -top-1 -right-1 px-1.5 text-[10px]' : ''
-                    } bg-rose-500 text-white shadow-sm`}
+              <div key={item.id} className="flex flex-col">
+                {hasSubmenu ? (
+                  <button
+                    onClick={() => {
+                      if (collapsed) handleToggleCollapse();
+                      toggleSubmenu(item.id);
+                    }}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all group relative w-full text-left ${
+                      isActive
+                        ? 'bg-zinc-900/90 text-white font-semibold'
+                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
+                    }`}
+                    title={collapsed ? item.name : undefined}
                   >
-                    {item.badge}
-                  </span>
+                    <Icon
+                      className={`w-5 h-5 shrink-0 transition-colors ${
+                        isActive ? 'text-teal-400' : 'text-zinc-400 group-hover:text-zinc-200'
+                      }`}
+                    />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1">{item.name}</span>
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300" />
+                        )}
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all group relative ${
+                      isActive
+                        ? 'bg-zinc-800 text-white font-semibold shadow-sm'
+                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/80'
+                    }`}
+                    title={collapsed ? item.name : undefined}
+                  >
+                    <Icon
+                      className={`w-5 h-5 shrink-0 transition-colors ${
+                        isActive ? 'text-teal-400' : 'text-zinc-400 group-hover:text-zinc-200'
+                      }`}
+                    />
+                    {!collapsed && <span className="flex-1">{item.name}</span>}
+
+                    {/* Unread badge */}
+                    {item.badge !== undefined && (
+                      <span
+                        className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                          collapsed ? 'absolute -top-1 -right-1 px-1.5 text-[10px]' : ''
+                        } bg-rose-500 text-white shadow-sm`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
                 )}
-              </Link>
+
+                {/* Render Submenu items */}
+                {hasSubmenu && !collapsed && isExpanded && (
+                  <div className="ml-5 pl-3 border-l border-zinc-800/80 flex flex-col gap-1 my-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                    {item.subItems!.map((sub) => {
+                      const isSubActive = pathname === sub.href;
+                      const SubIcon = sub.icon;
+                      return (
+                        <Link
+                          key={sub.name}
+                          href={sub.href}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                            isSubActive
+                              ? 'bg-teal-500/10 text-teal-400 font-semibold border border-teal-500/20'
+                              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
+                          }`}
+                        >
+                          {SubIcon && <SubIcon className="w-3.5 h-3.5 shrink-0 opacity-70" />}
+                          <span>{sub.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>

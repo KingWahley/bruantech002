@@ -88,7 +88,7 @@ export default function DataTable<TData, TValue>({
 
       {/* Table Container */}
       <div className="border border-zinc-800 rounded-2xl overflow-hidden bg-zinc-900/60 shadow-lg">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (

@@ -1,4 +1,4 @@
-import { getProjectBySlug } from '@/lib/actions/projects';
+import { getProjects, getProjectBySlug } from '@/lib/actions/projects';
 import { caseStudiesData } from '@/constants';
 import { notFound } from 'next/navigation';
 import ProjectDetails from '@/components/ProjectDetails';
@@ -9,7 +9,16 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
+  const projects = await getProjects({ status: 'published' });
+  if (projects && projects.length > 0) {
+    return projects.map((project: any) => ({
+      slug: project.slug,
+    }));
+  }
+
   return caseStudiesData.map((post) => ({
     slug: post.slug,
   }));

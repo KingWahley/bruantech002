@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createPublicClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { logActivity } from './activity';
 import { SiteSettingsFormValues } from '../validations/settings';
@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS: SiteSettingsFormValues = {
 
 export async function getSiteSettings(): Promise<SiteSettingsFormValues> {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from('settings')
       .select('*')

@@ -5,12 +5,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { siteSettingsSchema, SiteSettingsFormValues } from '@/lib/validations/settings';
 import { getSiteSettings, updateSiteSettings } from '@/lib/actions/settings';
-import { Save, Globe, Mail, Phone, MapPin, Share2, BarChart2 } from 'lucide-react';
+import { seedDatabase } from '@/lib/actions/seed';
+import { Save, Globe, Mail, Share2, BarChart2, Database, Loader2, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   const form = useForm<SiteSettingsFormValues>({
     resolver: zodResolver(siteSettingsSchema),
@@ -53,23 +55,57 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSeedDatabase = async () => {
+    setSeeding(true);
+    const res = await seedDatabase();
+    setSeeding(false);
+
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success(res.message || 'Database populated successfully!');
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-8 pb-12">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
           <h1 className="text-2xl font-bold font-mono text-zinc-100 tracking-tight">Website Settings</h1>
-          <p className="text-xs text-zinc-400 mt-1">Configure site-wide metadata, contact details, and social channels</p>
+          <p className="text-xs text-zinc-400 mt-1">Configure site-wide metadata, contact details, and database contents</p>
         </div>
 
-        <button
-          type="submit"
-          disabled={saving || loading}
-          className="flex items-center gap-2 px-5 py-2 bg-teal-500 hover:bg-teal-400 text-zinc-950 font-bold text-xs rounded-xl transition-all shadow-md shadow-teal-500/10 disabled:opacity-50"
-        >
-          <Save className="w-4 h-4" />
-          {saving ? 'Saving...' : 'Save Settings'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleSeedDatabase}
+            disabled={seeding || loading}
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-bold text-xs rounded-xl transition-all disabled:opacity-50"
+            title="Populate Supabase tables with initial portfolio projects, blog posts, and site settings"
+          >
+            {seeding ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-teal-400" />
+                Populating DB...
+              </>
+            ) : (
+              <>
+                <Database className="w-4 h-4 text-teal-400" />
+                Populate Database
+              </>
+            )}
+          </button>
+
+          <button
+            type="submit"
+            disabled={saving || loading}
+            className="flex items-center gap-2 px-5 py-2 bg-teal-500 hover:bg-teal-400 text-zinc-950 font-bold text-xs rounded-xl transition-all shadow-md shadow-teal-500/10 disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
       </div>
 
       {/* Main Grid */}
@@ -158,9 +194,45 @@ export default function SettingsPage() {
 
         </div>
 
-        {/* Right Column: Social Links & Integrations */}
+        {/* Right Column: Social Links & Database Seeding */}
         <div className="flex flex-col gap-6">
           
+          {/* Database Sync Card */}
+          <div className="bg-gradient-to-br from-teal-950/40 via-zinc-900 to-zinc-900 border border-teal-500/20 rounded-2xl p-6 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-teal-500/10 border border-teal-500/20 rounded-xl text-teal-400">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-zinc-100 font-mono">Supabase Content Sync</h2>
+                <p className="text-xs text-zinc-400">Populate or refresh database tables with default portfolio projects and blog posts</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Clicking <strong className="text-zinc-200">Populate Database</strong> will import all 8 portfolio projects and blog starter articles directly into your connected Supabase project.
+            </p>
+
+            <button
+              type="button"
+              onClick={handleSeedDatabase}
+              disabled={seeding || loading}
+              className="w-full py-3 px-4 bg-teal-500 hover:bg-teal-400 text-zinc-950 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-500/10 disabled:opacity-50 mt-1"
+            >
+              {seeding ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Seeding Supabase Tables...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  Populate Database Now
+                </>
+              )}
+            </button>
+          </div>
+
           {/* Social Channels */}
           <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-6 flex flex-col gap-5">
             <h2 className="text-sm font-bold text-zinc-100 font-mono flex items-center gap-2">

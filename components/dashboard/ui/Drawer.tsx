@@ -40,7 +40,7 @@ export default function Drawer({ isOpen, onClose, title, children }: DrawerProps
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">{children}</div>
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6">{children}</div>
         </div>
       </div>
     </div>

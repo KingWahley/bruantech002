@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createPublicClient } from '@/lib/supabase/server';
 import { bruantechBlogs } from '@/constants';
 import { revalidatePath } from 'next/cache';
 import { logActivity } from './activity';
@@ -8,7 +8,7 @@ import { BlogPostFormValues } from '../validations/blog';
 
 export async function getBlogPosts(options?: { status?: string; includeDeleted?: boolean }) {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     let query = supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
 
     if (!options?.includeDeleted) {
@@ -62,7 +62,7 @@ export async function getBlogPosts(options?: { status?: string; includeDeleted?:
 
 export async function getBlogPostBySlug(slug: string) {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from('blog_posts')
       .select('*')

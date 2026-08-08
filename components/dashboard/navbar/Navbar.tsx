@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Search, Bell, User, ChevronRight, Home } from 'lucide-react';
+import { Bell, User, Home } from 'lucide-react';
 
 interface NavbarProps {
   userEmail?: string;
@@ -11,60 +10,23 @@ interface NavbarProps {
   userAvatar?: string;
 }
 
-export default function Navbar({
+export default function DashboardNavbar({
   userEmail = 'admin@bruantech.com',
   userFullName = 'Admin User',
   userAvatar = '',
 }: NavbarProps) {
-  const pathname = usePathname();
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Generate breadcrumb items
-  const pathSegments = pathname.split('/').filter(Boolean);
-  const breadcrumbs = pathSegments.map((segment, index) => {
-    const href = '/' + pathSegments.slice(0, index + 1).join('/');
-    const label = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
-    return { href, label };
-  });
-
   return (
     <header className="h-16 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-30 px-6 flex items-center justify-between gap-4">
-      {/* Breadcrumbs */}
+      {/* Breadcrumbs / Title */}
       <nav className="flex items-center gap-2 text-xs font-medium text-zinc-400 overflow-x-auto">
-        <Link href="/dashboard" className="flex items-center gap-1 hover:text-zinc-200 transition-colors">
-          <Home className="w-3.5 h-3.5" />
+        <Link href="/dashboard" className="flex items-center gap-1.5 hover:text-zinc-200 transition-colors">
+          <Home className="w-3.5 h-3.5 text-teal-400" />
           <span>Dashboard</span>
         </Link>
-
-        {breadcrumbs.slice(1).map((crumb, idx) => (
-          <React.Fragment key={crumb.href}>
-            <ChevronRight className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
-            <Link
-              href={crumb.href}
-              className={`hover:text-zinc-200 transition-colors ${
-                idx === breadcrumbs.length - 2 ? 'text-zinc-100 font-semibold' : ''
-              }`}
-            >
-              {crumb.label}
-            </Link>
-          </React.Fragment>
-        ))}
       </nav>
 
-      {/* Right Controls: Search, Notifications, User Badge */}
+      {/* Right Controls: Notifications & User Badge */}
       <div className="flex items-center gap-4">
-        {/* Search */}
-        <div className="relative hidden md:block w-64">
-          <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Quick search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-teal-500 transition-colors"
-          />
-        </div>
-
         {/* Notifications Icon */}
         <button
           className="relative p-2 rounded-xl text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 transition-colors"

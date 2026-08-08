@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createPublicClient } from '@/lib/supabase/server';
 import { caseStudiesData } from '@/constants';
 import { revalidatePath } from 'next/cache';
 import { logActivity } from './activity';
@@ -8,7 +8,13 @@ import { ProjectFormValues } from '../validations/project';
 
 export async function getProjects(options?: { status?: string; includeDeleted?: boolean }) {
   try {
-    const supabase = await createClient();
+    let supabase;
+    try {
+      supabase = await createClient();
+    } catch {
+      supabase = createPublicClient();
+    }
+
     let query = supabase.from('projects').select('*').order('created_at', { ascending: false });
 
     if (!options?.includeDeleted) {
@@ -21,8 +27,9 @@ export async function getProjects(options?: { status?: string; includeDeleted?: 
 
     const { data, error } = await query;
 
-    if (error || !data || data.length === 0) {
-      // Fallback to constants for seamless public rendering if DB is empty or unconfigured
+    if (error) {
+      console.error('Database query error in getProjects:', error);
+      // Fallback to constants ONLY if there is a real database query error
       return caseStudiesData.map((item: any, idx: number) => ({
         id: `mock-project-${idx}`,
         title: item.title,
@@ -33,7 +40,7 @@ export async function getProjects(options?: { status?: string; includeDeleted?: 
         location: item.location || 'Nigeria',
         deliverables: item.deliverables || ['Web Design', 'Development'],
         process: item.process || [],
-        image: item.image || '/images/default.jpg',
+        image: typeof item.image === 'string' ? item.image : item.image?.src || '/images/default.jpg',
         gallery: item.gallery || [],
         tech_stack: item.techStack || [],
         featured: !!item.featured,
@@ -42,7 +49,7 @@ export async function getProjects(options?: { status?: string; includeDeleted?: 
       }));
     }
 
-    return data;
+    return data || [];
   } catch (err) {
     console.error('Error fetching projects:', err);
     return caseStudiesData.map((item: any, idx: number) => ({
@@ -55,7 +62,7 @@ export async function getProjects(options?: { status?: string; includeDeleted?: 
       location: item.location || 'Nigeria',
       deliverables: item.deliverables || ['Web Design'],
       process: item.process || [],
-      image: item.image || '/images/default.jpg',
+      image: typeof item.image === 'string' ? item.image : item.image?.src || '/images/default.jpg',
       gallery: item.gallery || [],
       tech_stack: item.techStack || [],
       featured: !!item.featured,
@@ -67,7 +74,13 @@ export async function getProjects(options?: { status?: string; includeDeleted?: 
 
 export async function getProjectBySlug(slug: string) {
   try {
-    const supabase = await createClient();
+    let supabase;
+    try {
+      supabase = await createClient();
+    } catch {
+      supabase = createPublicClient();
+    }
+
     const { data, error } = await supabase
       .from('projects')
       .select('*')
@@ -88,7 +101,7 @@ export async function getProjectBySlug(slug: string) {
         location: mock.location || 'Nigeria',
         deliverables: mock.deliverables || ['Web Design', 'Web Development'],
         process: mock.process || [],
-        image: mock.image || '',
+        image: typeof mock.image === 'string' ? mock.image : mock.image?.src || '',
         gallery: mock.gallery || [],
         tech_stack: mock.techStack || [],
         featured: !!mock.featured,
@@ -110,7 +123,7 @@ export async function getProjectBySlug(slug: string) {
       location: mock.location || 'Nigeria',
       deliverables: mock.deliverables || ['Web Design'],
       process: mock.process || [],
-      image: mock.image || '',
+      image: typeof mock.image === 'string' ? mock.image : mock.image?.src || '',
       gallery: mock.gallery || [],
       tech_stack: mock.techStack || [],
       featured: !!mock.featured,
@@ -120,6 +133,53 @@ export async function getProjectBySlug(slug: string) {
 }
 
 export async function getProjectById(id: string) {
+  if (id.startsWith('mock-project-')) {
+    const idxStr = id.replace('mock-project-', '');
+    const idx = parseInt(idxStr, 10);
+    const mock = caseStudiesData[idx];
+    if (mock) {
+      return {
+        id,
+        title: mock.title,
+        slug: mock.slug,
+        description: mock.description || '',
+        category: mock.category || 'Web Design',
+        client: mock.client || 'Client',
+        location: mock.location || 'Nigeria',
+        deliverables: mock.deliverables || ['Web Design', 'Development'],
+        process: mock.process || [],
+        image: typeof mock.image === 'string' ? mock.image : mock.image?.src || '',
+        gallery: mock.gallery || [],
+        tech_stack: mock.techStack || [],
+        featured: !!mock.featured,
+        status: 'published',
+      };
+    }
+  }
+
+  if (id.startsWith('mock-')) {
+    const slug = id.replace('mock-', '');
+    const mock = caseStudiesData.find((p) => p.slug === slug);
+    if (mock) {
+      return {
+        id,
+        title: mock.title,
+        slug: mock.slug,
+        description: mock.description || '',
+        category: mock.category || 'Web Design',
+        client: mock.client || 'Client',
+        location: mock.location || 'Nigeria',
+        deliverables: mock.deliverables || ['Web Design', 'Development'],
+        process: mock.process || [],
+        image: typeof mock.image === 'string' ? mock.image : mock.image?.src || '',
+        gallery: mock.gallery || [],
+        tech_stack: mock.techStack || [],
+        featured: !!mock.featured,
+        status: 'published',
+      };
+    }
+  }
+
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.from('projects').select('*').eq('id', id).single();
@@ -164,8 +224,11 @@ export async function createProject(values: ProjectFormValues) {
     details: { title: data.title, slug: data.slug },
   });
 
+  revalidatePath('/');
+  revalidatePath('/dashboard');
   revalidatePath('/dashboard/projects');
   revalidatePath('/case-studies');
+  revalidatePath(`/case-studies/${values.slug}`);
   return { success: true, data };
 }
 
@@ -208,6 +271,8 @@ export async function updateProject(id: string, values: ProjectFormValues) {
     details: { title: values.title, status: values.status },
   });
 
+  revalidatePath('/');
+  revalidatePath('/dashboard');
   revalidatePath('/dashboard/projects');
   revalidatePath(`/dashboard/projects/${id}`);
   revalidatePath('/case-studies');
@@ -235,6 +300,7 @@ export async function deleteProject(id: string, permanent = false) {
     entityId: id,
   });
 
+  revalidatePath('/dashboard');
   revalidatePath('/dashboard/projects');
   revalidatePath('/case-studies');
   return { success: true };
@@ -242,20 +308,37 @@ export async function deleteProject(id: string, permanent = false) {
 
 export async function toggleFeaturedProject(id: string, currentFeatured: boolean) {
   const supabase = await createClient();
+
+  const newFeaturedState = !currentFeatured;
+
+  // If we're featuring this project, unfeature all others first (only one featured at a time)
+  if (newFeaturedState) {
+    const { error: clearError } = await supabase
+      .from('projects')
+      .update({ featured: false })
+      .neq('id', id);
+
+    if (clearError) return { error: clearError.message };
+  }
+
+  // Now set the target project's featured state
   const { error } = await supabase
     .from('projects')
-    .update({ featured: !currentFeatured })
+    .update({ featured: newFeaturedState })
     .eq('id', id);
 
   if (error) return { error: error.message };
 
   await logActivity({
-    action: !currentFeatured ? 'PROJECT_FEATURED' : 'PROJECT_UNFEATURED',
+    action: newFeaturedState ? 'PROJECT_FEATURED' : 'PROJECT_UNFEATURED',
     entityType: 'project',
     entityId: id,
   });
 
+  revalidatePath('/');
+  revalidatePath('/dashboard');
   revalidatePath('/dashboard/projects');
   revalidatePath('/case-studies');
   return { success: true };
 }
+

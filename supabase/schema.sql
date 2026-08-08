@@ -65,7 +65,7 @@ CREATE POLICY "Users can update own profile"
 -- 2. PROJECTS TABLE
 --------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.projects (
-  id UUID PRIMARY KEY DEFAULT gen_random_bytes(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
   description TEXT,
@@ -111,7 +111,7 @@ CREATE POLICY "Authenticated users have full access to projects"
 -- 3. BLOG CATEGORIES & TAGS TABLES
 --------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.blog_categories (
-  id UUID PRIMARY KEY DEFAULT gen_random_bytes(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
   slug TEXT NOT NULL UNIQUE,
   description TEXT,
@@ -127,7 +127,7 @@ CREATE POLICY "Authenticated can manage categories"
   ON public.blog_categories FOR ALL USING (auth.role() = 'authenticated');
 
 CREATE TABLE IF NOT EXISTS public.blog_tags (
-  id UUID PRIMARY KEY DEFAULT gen_random_bytes(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
   slug TEXT NOT NULL UNIQUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -145,7 +145,7 @@ CREATE POLICY "Authenticated can manage tags"
 -- 4. BLOG POSTS TABLE
 --------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.blog_posts (
-  id UUID PRIMARY KEY DEFAULT gen_random_bytes(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
   excerpt TEXT,
@@ -189,7 +189,7 @@ CREATE POLICY "Authenticated users have full access to blog posts"
 -- 5. MESSAGES TABLE (Contact Form)
 --------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_bytes(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
   email TEXT NOT NULL,
@@ -225,7 +225,7 @@ CREATE POLICY "Authenticated admins can view and manage messages"
 -- 6. ACTIVITY LOGS TABLE
 --------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.activity_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_bytes(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   user_email TEXT,
   action TEXT NOT NULL,
@@ -251,7 +251,7 @@ CREATE POLICY "Authenticated admins can insert activity logs"
 -- 7. SETTINGS TABLE
 --------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.settings (
-  id UUID PRIMARY KEY DEFAULT gen_random_bytes(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   key TEXT NOT NULL UNIQUE,
   value JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

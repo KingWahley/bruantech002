@@ -14,25 +14,61 @@
   --font-mono: var(--font-space-grotesk);
 }
 
-/* @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-} */
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans)
+  font-family: var(--font-sans);
+}
+
+/* --------------------------------------------------
+ * CUSTOM SLEEK DASHBOARD SCROLLBARS (WebKit + Firefox)
+ * -------------------------------------------------- */
+aside::-webkit-scrollbar,
+aside *::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar,
+::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+
+aside::-webkit-scrollbar-track,
+aside *::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track,
+::-webkit-scrollbar-track {
+  background: #09090b !important;
+  border-radius: 9999px !important;
+}
+
+aside::-webkit-scrollbar-thumb,
+aside *::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb {
+  background: #27272a !important;
+  border-radius: 9999px !important;
+}
+
+aside::-webkit-scrollbar-thumb:hover,
+aside *::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:hover {
+  background: #14b8a6 !important;
+}
+
+/* Firefox scrollbar targeting */
+aside,
+aside *,
+.custom-scrollbar,
+* {
+  scrollbar-width: thin !important;
+  scrollbar-color: #27272a #09090b !important;
 }
 
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
-    display: none;
+    display: none !important;
   }
   .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
   }
 }
