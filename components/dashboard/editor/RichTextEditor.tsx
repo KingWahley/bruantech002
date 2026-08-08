@@ -5,7 +5,6 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Link } from '@tiptap/extension-link';
 import { Image } from '@tiptap/extension-image';
-import { Table } from '@tiptap/extension-table';
 import {
   Bold,
   Italic,
@@ -43,7 +42,6 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
       StarterKit,
       Link.configure({ openOnClick: false }),
       Image,
-      Table.configure({ resizable: true }),
     ],
     content: initialContent,
     immediatelyRender: false,
