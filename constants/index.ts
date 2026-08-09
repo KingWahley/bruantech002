@@ -508,7 +508,7 @@ export const solutionsData = [
   },
   {
     slug: "digital-marketing",
-    title: "Digital marketing",
+    title: "Digital Marketing",
     description: "Build a powerful online presence that resonates with your customers through our tailored, result-driven web development services.",
     image: images.solimg6,
     bgColor: "bg-[#F1F1F1]"
