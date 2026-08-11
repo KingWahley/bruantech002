@@ -56,6 +56,7 @@ export default function ProjectForm({ initialData, isEditing = false }: ProjectF
     client: initialData?.client || '',
     location: initialData?.location || '',
     description: initialData?.description || '',
+    tagline: initialData?.tagline || '',
     deliverables: initialData?.deliverables || [],
     process: initialData?.process || [],
     image: initialData?.image || '',
@@ -294,6 +295,20 @@ export default function ProjectForm({ initialData, isEditing = false }: ProjectF
                 rows={3}
                 placeholder="Brief summary displayed on project cards..."
                 className="w-full p-4 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-200 focus:outline-none focus:border-teal-500 transition-colors resize-none"
+              />
+            </div>
+
+            {/* Tagline */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-zinc-300">
+                Card Tagline
+                <span className="ml-2 text-zinc-500 font-normal">(shown on case study cards)</span>
+              </label>
+              <input
+                type="text"
+                {...register('tagline')}
+                placeholder="e.g. We designed and developed a sophisticated digital experience..."
+                className="w-full px-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-200 focus:outline-none focus:border-teal-500 transition-colors"
               />
             </div>
           </div>

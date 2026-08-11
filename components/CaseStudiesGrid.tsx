@@ -114,10 +114,10 @@ export default function CaseStudiesGrid({ projects }: CaseStudiesGridProps) {
               : project.image?.src || '/images/default.jpg';
 
             const maxChar = 120;
-            const descriptionText = project.description || '';
-            const truncatedDescription = descriptionText.length > maxChar
-              ? `${descriptionText.slice(0, maxChar).trim()}...`
-              : descriptionText;
+            const cardText = project.tagline || project.description || '';
+            const truncatedDescription = cardText.length > maxChar
+              ? `${cardText.slice(0, maxChar).trim()}...`
+              : cardText;
 
             return (
               <motion.div
@@ -133,7 +133,7 @@ export default function CaseStudiesGrid({ projects }: CaseStudiesGridProps) {
                   className="flex flex-col justify-between border-3 border-black rounded-3xl overflow-hidden h-full group hover:shadow-xl transition-all duration-300"
                 >
                   {/* Text Content */}
-                  <div className="p-6 flex flex-col gap-2 grow bg-white min-h-[170px]">
+                  <div className="p-6 flex flex-col gap-2 grow bg-white min-h-[130px]">
                     <h3 className="text-xl md:text-2xl font-extrabold font-mono text-black group-hover:text-[#5EB3C3] transition-colors line-clamp-2">
                       {project.title}
                     </h3>
@@ -142,7 +142,7 @@ export default function CaseStudiesGrid({ projects }: CaseStudiesGridProps) {
                     </p>
                   </div>
                   {/* Bottom Image */}
-                  <div className="relative w-full aspect-video bg-gray-100 shrink-0">
+                  <div className="relative w-full h-52 bg-gray-100 shrink-0">
                     <Image 
                       src={imgSrc}
                       alt={project.title || 'Case Study'}

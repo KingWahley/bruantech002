@@ -8,6 +8,8 @@ export const projectSchema = z.object({
   client: z.string().optional(),
   location: z.string().optional(),
   description: z.string().optional(),
+  tagline: z.string().optional(),
+
   deliverables: z.array(z.string()).optional(),
   process: z.array(z.string()).optional(),
   image: z.string().optional(),
