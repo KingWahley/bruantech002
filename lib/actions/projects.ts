@@ -41,48 +41,13 @@ export async function getProjects(options?: { status?: string; includeDeleted?: 
 
     if (error) {
       console.error('Database query error in getProjects:', error);
-      // Fallback to constants ONLY if there is a real database query error
-      return caseStudiesData.map((item: any, idx: number) => ({
-        id: `mock-project-${idx}`,
-        title: item.title,
-        slug: item.slug,
-        description: item.description || '',
-        category: item.category || 'Web Design',
-        categories: item.categories || [item.category || 'Web Design'],
-        client: item.client || 'Client',
-        location: item.location || 'Nigeria',
-        deliverables: item.deliverables || ['Web Design', 'Development'],
-        process: item.process || [],
-        image: typeof item.image === 'string' ? item.image : item.image?.src || '/images/default.jpg',
-        gallery: item.gallery || [],
-        tech_stack: item.techStack || [],
-        featured: !!item.featured,
-        status: 'published',
-        created_at: new Date().toISOString(),
-      }));
+      return [];
     }
 
     return data ? data.map(normaliseProject) : [];
   } catch (err) {
     console.error('Error fetching projects:', err);
-    return caseStudiesData.map((item: any, idx: number) => ({
-      id: `mock-project-${idx}`,
-      title: item.title,
-      slug: item.slug,
-      description: item.description || '',
-      category: item.category || 'Web Design',
-        categories: item.categories || [item.category || 'Web Design'],
-      client: item.client || 'Client',
-      location: item.location || 'Nigeria',
-      deliverables: item.deliverables || ['Web Design'],
-      process: item.process || [],
-      image: typeof item.image === 'string' ? item.image : item.image?.src || '/images/default.jpg',
-      gallery: item.gallery || [],
-      tech_stack: item.techStack || [],
-      featured: !!item.featured,
-      status: 'published',
-      created_at: new Date().toISOString(),
-    }));
+    return [];
   }
 }
 
@@ -376,7 +341,7 @@ export async function getProjectCategories(): Promise<string[]> {
       .select('category, categories')
       .is('deleted_at', null);
 
-    const fromDb: string[] = (data ?? []).flatMap((r: any) => {
+    const fromDb: string[] = (data ?? []).flatMap((r: { category?: string; categories?: string[] }) => {
       if (Array.isArray(r.categories) && r.categories.length > 0) return r.categories;
       return r.category ? [r.category] : [];
     }).filter(Boolean);
@@ -387,3 +352,44 @@ export async function getProjectCategories(): Promise<string[]> {
     return DEFAULTS;
   }
 }
+
+export async function bulkUpdateProjects(ids: string[], action: 'publish' | 'draft' | 'delete') {
+  if (!ids || ids.length === 0) return { success: true };
+  const supabase = await createClient();
+
+  if (action === 'delete') {
+    const { error } = await supabase
+      .from('projects')
+      .update({ deleted_at: new Date().toISOString(), status: 'archived' })
+      .in('id', ids);
+
+    if (error) return { error: error.message };
+
+    await logActivity({
+      action: 'PROJECT_BULK_DELETED',
+      entityType: 'project',
+      details: { count: ids.length, ids },
+    });
+  } else {
+    const status = action === 'publish' ? 'published' : 'draft';
+    const { error } = await supabase
+      .from('projects')
+      .update({ status })
+      .in('id', ids);
+
+    if (error) return { error: error.message };
+
+    await logActivity({
+      action: action === 'publish' ? 'PROJECT_BULK_PUBLISHED' : 'PROJECT_BULK_DRAFTED',
+      entityType: 'project',
+      details: { count: ids.length, ids, status },
+    });
+  }
+
+  revalidatePath('/');
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/projects');
+  revalidatePath('/case-studies');
+  return { success: true };
+}
+

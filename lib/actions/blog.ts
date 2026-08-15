@@ -8,7 +8,12 @@ import { BlogPostFormValues } from '../validations/blog';
 
 export async function getBlogPosts(options?: { status?: string; includeDeleted?: boolean }) {
   try {
-    const supabase = createPublicClient();
+    let supabase;
+    try {
+      supabase = await createClient();
+    } catch {
+      supabase = createPublicClient();
+    }
     let query = supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
 
     if (!options?.includeDeleted) {
@@ -21,42 +26,15 @@ export async function getBlogPosts(options?: { status?: string; includeDeleted?:
 
     const { data, error } = await query;
 
-    if (error || !data || data.length === 0) {
-      return bruantechBlogs.map((post: any, idx: number) => ({
-        id: `mock-blog-${idx}`,
-        title: post.title,
-        slug: post.slug,
-        excerpt: post.excerpt || '',
-        image: post.image || '',
-        category: post.category || 'GOOGLE',
-        author: post.author || { name: 'ADMIN', role: 'Design Director', avatar: '' },
-        read_time: post.readTime || '5 min read',
-        content: post.content || [],
-        status: 'published',
-        published_at: post.date || new Date().toISOString(),
-        featured: idx === 0,
-        created_at: new Date().toISOString(),
-      }));
+    if (error) {
+      console.error('Database query error in getBlogPosts:', error);
+      return [];
     }
 
-    return data;
+    return data ?? [];
   } catch (err) {
     console.error('Error fetching blog posts:', err);
-    return bruantechBlogs.map((post: any, idx: number) => ({
-      id: `mock-blog-${idx}`,
-      title: post.title,
-      slug: post.slug,
-      excerpt: post.excerpt || '',
-      image: post.image || '',
-      category: post.category || 'GOOGLE',
-      author: post.author || { name: 'ADMIN', role: 'Design Director', avatar: '' },
-      read_time: post.readTime || '5 min read',
-      content: post.content || [],
-      status: 'published',
-      published_at: post.date || new Date().toISOString(),
-      featured: idx === 0,
-      created_at: new Date().toISOString(),
-    }));
+    return [];
   }
 }
 
@@ -231,3 +209,72 @@ export async function deleteBlogPost(id: string, permanent = false) {
   revalidatePath('/blog');
   return { success: true };
 }
+
+export async function bulkUpdateBlogPosts(ids: string[], action: 'publish' | 'draft' | 'delete') {
+  if (!ids || ids.length === 0) return { success: true };
+  const supabase = await createClient();
+
+  if (action === 'delete') {
+    const { error } = await supabase
+      .from('blog_posts')
+      .update({ deleted_at: new Date().toISOString(), status: 'archived' })
+      .in('id', ids);
+
+    if (error) return { error: error.message };
+
+    await logActivity({
+      action: 'BLOG_BULK_DELETED',
+      entityType: 'blog',
+      details: { count: ids.length, ids },
+    });
+  } else {
+    const status = action === 'publish' ? 'published' : 'draft';
+    const payload: Record<string, any> = { status };
+    if (action === 'publish') {
+      payload.published_at = new Date().toISOString();
+    }
+    const { error } = await supabase
+      .from('blog_posts')
+      .update(payload)
+      .in('id', ids);
+
+    if (error) return { error: error.message };
+
+    await logActivity({
+      action: action === 'publish' ? 'BLOG_BULK_PUBLISHED' : 'BLOG_BULK_DRAFTED',
+      entityType: 'blog',
+      details: { count: ids.length, ids, status },
+    });
+  }
+
+  revalidatePath('/dashboard/blog');
+  revalidatePath('/blog');
+  return { success: true };
+}
+
+export async function getBlogCategories(): Promise<string[]> {
+  const DEFAULTS = ['GOOGLE', 'CLOUD ENGINEERING', 'SOFTWARE DEVELOPMENT', 'E-COMMERCE', 'GENERAL'];
+  try {
+    let supabase;
+    try {
+      supabase = await createClient();
+    } catch {
+      supabase = createPublicClient();
+    }
+    const { data } = await supabase
+      .from('blog_posts')
+      .select('category')
+      .is('deleted_at', null);
+
+    const fromDb: string[] = (data ?? [])
+      .map((r: { category?: string }) => r.category ? r.category.toUpperCase().trim() : '')
+      .filter(Boolean);
+
+    const merged = Array.from(new Set([...DEFAULTS, ...fromDb])).sort();
+    return merged;
+  } catch {
+    return DEFAULTS;
+  }
+}
+
+

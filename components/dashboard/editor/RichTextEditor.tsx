@@ -3,8 +3,9 @@
 import React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { Link } from '@tiptap/extension-link';
-import { Image } from '@tiptap/extension-image';
+import { Link as LinkExtension } from '@tiptap/extension-link';
+import { Image as ImageExtension } from '@tiptap/extension-image';
+import { TableKit } from '@tiptap/extension-table';
 import {
   Bold,
   Italic,
@@ -14,7 +15,11 @@ import {
   ListOrdered,
   Quote,
   Code,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Unlink,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface RichTextEditorProps {
   value: any;
@@ -23,55 +28,84 @@ interface RichTextEditorProps {
 
 export default function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   // Convert existing block array or string into HTML string for Tiptap
-  const initialContent = Array.isArray(value)
+  const initialContent = typeof value === 'string' && value
+    ? value
+    : Array.isArray(value)
     ? value
         .map((block: any) => {
-          if (block.type === 'paragraph') return `<p>${block.text}</p>`;
-          if (block.type === 'heading2') return `<h2>${block.text}</h2>`;
-          if (block.type === 'heading3') return `<h3>${block.text}</h3>`;
-          if (block.type === 'italic') return `<p><em>${block.text}</em></p>`;
+          if (!block) return '';
+          if (typeof block === 'string') return `<p>${block}</p>`;
+          if (block.type === 'paragraph') return `<p>${block.text || ''}</p>`;
+          if (block.type === 'heading2' || block.type === 'h2') return `<h2>${block.text || ''}</h2>`;
+          if (block.type === 'heading3' || block.type === 'h3') return `<h3>${block.text || ''}</h3>`;
+          if (block.type === 'italic') return `<p><em>${block.text || ''}</em></p>`;
+          if (block.type === 'blockquote') return `<blockquote>${block.text || ''}</blockquote>`;
+          if (block.type === 'bulletList' || block.type === 'ul') {
+            const items = block.items?.map((i: string) => `<li>${i}</li>`).join('') || '';
+            return `<ul>${items}</ul>`;
+          }
+          if (block.type === 'orderedList' || block.type === 'ol') {
+            const items = block.items?.map((i: string) => `<li>${i}</li>`).join('') || '';
+            return `<ol>${items}</ol>`;
+          }
+          if (block.html) return block.html;
+          if (block.text) return `<p>${block.text}</p>`;
           return '';
         })
         .join('')
-    : typeof value === 'string' && value
-    ? value
     : '<p>Write your article content here...</p>';
 
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Link.configure({ openOnClick: false }),
-      Image,
+      LinkExtension.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+      }),
+      ImageExtension.configure({
+        inline: true,
+        allowBase64: true,
+      }),
+      TableKit.configure({
+        table: {
+          resizable: true,
+        },
+      }),
     ],
     content: initialContent,
     immediatelyRender: false,
+    editorProps: {
+      transformPastedHTML(html) {
+        return html;
+      },
+    },
     onUpdate: ({ editor }) => {
-      const json = editor.getJSON();
-      const contentBlocks: any[] = [];
-
-      json.content?.forEach((item: any) => {
-        if (item.type === 'paragraph') {
-          const isItalic = item.content?.some((c: any) => c.marks?.some((m: any) => m.type === 'italic'));
-          const text = item.content?.map((c: any) => c.text).join('') || '';
-          contentBlocks.push({
-            type: isItalic ? 'italic' : 'paragraph',
-            text,
-          });
-        } else if (item.type === 'heading') {
-          const level = item.attrs?.level;
-          const text = item.content?.map((c: any) => c.text).join('') || '';
-          contentBlocks.push({
-            type: level === 2 ? 'heading2' : 'heading3',
-            text,
-          });
-        }
-      });
-
-      onChange(contentBlocks.length > 0 ? contentBlocks : editor.getHTML());
+      onChange(editor.getHTML());
     },
   });
 
   if (!editor) return null;
+
+  const setLink = () => {
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('URL link:', previousUrl);
+
+    if (url === null) return;
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  };
+
+  const addImage = () => {
+    const url = window.prompt('Image URL:');
+    if (url) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+  };
 
   return (
     <div className="border border-zinc-800 rounded-2xl overflow-hidden bg-zinc-900/60 flex flex-col">
@@ -165,6 +199,39 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
           title="Code Block"
         >
           <Code className="w-4 h-4" />
+        </button>
+
+        <div className="w-px h-5 bg-zinc-800 mx-1" />
+
+        <button
+          type="button"
+          onClick={setLink}
+          className={`p-2 rounded-lg hover:bg-zinc-800 transition-colors ${
+            editor.isActive('link') ? 'bg-teal-500/20 text-teal-400 font-bold' : ''
+          }`}
+          title="Insert Link"
+        >
+          <LinkIcon className="w-4 h-4" />
+        </button>
+
+        {editor.isActive('link') && (
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().unsetLink().run()}
+            className="p-2 rounded-lg hover:bg-zinc-800 text-rose-400 transition-colors"
+            title="Remove Link"
+          >
+            <Unlink className="w-4 h-4" />
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={addImage}
+          className="p-2 rounded-lg hover:bg-zinc-800 transition-colors"
+          title="Insert Image URL"
+        >
+          <ImageIcon className="w-4 h-4" />
         </button>
       </div>
 

@@ -57,11 +57,12 @@ export default function ImageUploader({
 
       // Validate MIME & Size (max 5MB)
       if (!file.type.startsWith('image/')) {
-        toast.error(`${file.name} is not a valid image file.`);
+        toast.error(`"${file.name}" is not a supported image file. Please upload an image format (PNG, JPG, WEBP, GIF).`);
         continue;
       }
       if (file.size > 5 * 1024 * 1024) {
-        toast.error(`${file.name} exceeds 5MB limit.`);
+        const fileMb = (file.size / (1024 * 1024)).toFixed(1);
+        toast.error(`File "${file.name}" is ${fileMb}MB. Maximum allowed size is 5MB. Please upload an image under 5MB.`);
         continue;
       }
 
@@ -77,15 +78,16 @@ export default function ImageUploader({
 
         if (error) {
           console.warn('Supabase storage upload fallback:', error.message);
-          // Fallback to Object URL preview if Supabase storage bucket is not created yet
+          toast.error(`Storage Upload Note for "${file.name}": ${error.message || 'Bucket error'}. Fallback preview enabled.`);
           const objectUrl = URL.createObjectURL(file);
           uploadedUrls.push(objectUrl);
         } else {
           const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
           uploadedUrls.push(publicUrlData.publicUrl);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('File upload error:', err);
+        toast.error(`Failed to process "${file.name}": ${err?.message || 'Unknown error'}`);
         const objectUrl = URL.createObjectURL(file);
         uploadedUrls.push(objectUrl);
       }

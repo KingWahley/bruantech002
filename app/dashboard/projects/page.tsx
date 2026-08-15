@@ -7,7 +7,7 @@ import { Plus, Edit, Trash2, Star, Eye, ExternalLink } from 'lucide-react';
 import DataTable from '@/components/dashboard/tables/DataTable';
 import Badge from '@/components/dashboard/ui/Badge';
 import ConfirmModal from '@/components/dashboard/ui/ConfirmModal';
-import { getProjects, deleteProject, toggleFeaturedProject } from '@/lib/actions/projects';
+import { getProjects, deleteProject, toggleFeaturedProject, bulkUpdateProjects } from '@/lib/actions/projects';
 import toast from 'react-hot-toast';
 import { formatDate } from '@/lib/utils';
 
@@ -59,6 +59,25 @@ export default function ProjectsPage() {
   };
 
   const columns: ColumnDef<any>[] = [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          checked={table.getIsAllPageRowsSelected()}
+          onChange={table.getToggleAllPageRowsSelectedHandler()}
+          className="w-4 h-4 accent-teal-500 rounded cursor-pointer"
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          onChange={row.getToggleSelectedHandler()}
+          className="w-4 h-4 accent-teal-500 rounded cursor-pointer"
+        />
+      ),
+    },
     {
       id: 'image',
       header: 'Image',
@@ -160,6 +179,32 @@ export default function ProjectsPage() {
     },
   ];
 
+  const getEmptyStateDetails = () => {
+    switch (activeTab) {
+      case 'draft':
+        return {
+          title: 'No draft projects found',
+          description: 'You currently have no portfolio projects saved as draft.',
+        };
+      case 'published':
+        return {
+          title: 'No published projects found',
+          description: 'No published projects match your current view.',
+        };
+      case 'archived':
+        return {
+          title: 'No archived projects found',
+          description: 'Your project archive and trash are empty.',
+        };
+      default:
+        return {
+          title: 'No projects found',
+          description: 'Get started by creating your first portfolio project.',
+        };
+    }
+  };
+  const emptyState = getEmptyStateDetails();
+
   return (
     <div className="flex flex-col gap-6">
       {/* Top Header */}
@@ -201,8 +246,54 @@ export default function ProjectsPage() {
         data={projects}
         searchPlaceholder="Search projects by title..."
         isLoading={loading}
-        emptyStateTitle="No projects found"
-        emptyStateDescription="Get started by creating your first portfolio project."
+        bulkActions={(selectedRows) => (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                const ids = selectedRows.map((r: any) => r.id);
+                const res = await bulkUpdateProjects(ids, 'publish');
+                if (res?.error) toast.error(res.error);
+                else {
+                  toast.success(`Published ${ids.length} projects`);
+                  fetchProjectsData();
+                }
+              }}
+              className="px-2.5 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-lg text-xs font-medium hover:bg-teal-500/30 transition-colors"
+            >
+              Publish
+            </button>
+            <button
+              onClick={async () => {
+                const ids = selectedRows.map((r: any) => r.id);
+                const res = await bulkUpdateProjects(ids, 'draft');
+                if (res?.error) toast.error(res.error);
+                else {
+                  toast.success(`Moved ${ids.length} projects to Draft`);
+                  fetchProjectsData();
+                }
+              }}
+              className="px-2.5 py-1 bg-zinc-800 text-zinc-200 rounded-lg text-xs font-medium hover:bg-zinc-700 transition-colors"
+            >
+              Set Draft
+            </button>
+            <button
+              onClick={async () => {
+                const ids = selectedRows.map((r: any) => r.id);
+                const res = await bulkUpdateProjects(ids, 'delete');
+                if (res?.error) toast.error(res.error);
+                else {
+                  toast.success(`Archived ${ids.length} projects`);
+                  fetchProjectsData();
+                }
+              }}
+              className="px-2.5 py-1 bg-rose-600/20 text-rose-400 border border-rose-500/20 rounded-lg text-xs font-medium hover:bg-rose-600/30 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        )}
+        emptyStateTitle={emptyState.title}
+        emptyStateDescription={emptyState.description}
         emptyStateAction={
           <Link
             href="/dashboard/projects/new"

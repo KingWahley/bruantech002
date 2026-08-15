@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -17,7 +17,6 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchPlaceholder?: string;
-  searchColumn?: string;
   isLoading?: boolean;
   bulkActions?: (selectedRows: TData[]) => React.ReactNode;
   emptyStateTitle?: string;
@@ -29,7 +28,6 @@ export default function DataTable<TData, TValue>({
   columns,
   data,
   searchPlaceholder = 'Search records...',
-  searchColumn,
   isLoading = false,
   bulkActions,
   emptyStateTitle = 'No items found',
@@ -39,6 +37,10 @@ export default function DataTable<TData, TValue>({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [rowSelection, setRowSelection] = useState({});
+
+  useEffect(() => {
+    setRowSelection({});
+  }, [data]);
 
   const table = useReactTable({
     data,

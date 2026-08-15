@@ -7,7 +7,7 @@ import { Plus, Edit, Trash2, Eye, ExternalLink, Clock } from 'lucide-react';
 import DataTable from '@/components/dashboard/tables/DataTable';
 import Badge from '@/components/dashboard/ui/Badge';
 import ConfirmModal from '@/components/dashboard/ui/ConfirmModal';
-import { getBlogPosts, deleteBlogPost } from '@/lib/actions/blog';
+import { getBlogPosts, deleteBlogPost, bulkUpdateBlogPosts } from '@/lib/actions/blog';
 import toast from 'react-hot-toast';
 import { formatDate } from '@/lib/utils';
 
@@ -48,6 +48,25 @@ export default function BlogCMSPage() {
   };
 
   const columns: ColumnDef<any>[] = [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          checked={table.getIsAllPageRowsSelected()}
+          onChange={table.getToggleAllPageRowsSelectedHandler()}
+          className="w-4 h-4 accent-purple-500 rounded cursor-pointer"
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          onChange={row.getToggleSelectedHandler()}
+          className="w-4 h-4 accent-purple-500 rounded cursor-pointer"
+        />
+      ),
+    },
     {
       id: 'image',
       header: 'Cover',
@@ -150,6 +169,27 @@ export default function BlogCMSPage() {
     },
   ];
 
+  const getEmptyStateDetails = () => {
+    switch (activeTab) {
+      case 'draft':
+        return {
+          title: 'No draft blog posts found',
+          description: 'You currently have no articles saved as draft.',
+        };
+      case 'published':
+        return {
+          title: 'No published blog posts found',
+          description: 'No published articles match your current view.',
+        };
+      default:
+        return {
+          title: 'No blog posts found',
+          description: 'Write and publish your first blog post for the website.',
+        };
+    }
+  };
+  const emptyState = getEmptyStateDetails();
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -170,7 +210,7 @@ export default function BlogCMSPage() {
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
-        {['all', 'published', 'draft', 'scheduled', 'archived'].map((tab) => (
+        {['all', 'published', 'draft'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -191,8 +231,54 @@ export default function BlogCMSPage() {
         data={posts}
         searchPlaceholder="Search blog posts by title..."
         isLoading={loading}
-        emptyStateTitle="No blog posts found"
-        emptyStateDescription="Write and publish your first blog post for the website."
+        bulkActions={(selectedRows) => (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                const ids = selectedRows.map((r: any) => r.id);
+                const res = await bulkUpdateBlogPosts(ids, 'publish');
+                if (res?.error) toast.error(res.error);
+                else {
+                  toast.success(`Published ${ids.length} posts`);
+                  fetchBlogPosts();
+                }
+              }}
+              className="px-2.5 py-1 bg-purple-600/20 text-purple-300 border border-purple-500/30 rounded-lg text-xs font-medium hover:bg-purple-600/30 transition-colors"
+            >
+              Publish
+            </button>
+            <button
+              onClick={async () => {
+                const ids = selectedRows.map((r: any) => r.id);
+                const res = await bulkUpdateBlogPosts(ids, 'draft');
+                if (res?.error) toast.error(res.error);
+                else {
+                  toast.success(`Moved ${ids.length} posts to Draft`);
+                  fetchBlogPosts();
+                }
+              }}
+              className="px-2.5 py-1 bg-zinc-800 text-zinc-200 rounded-lg text-xs font-medium hover:bg-zinc-700 transition-colors"
+            >
+              Set Draft
+            </button>
+            <button
+              onClick={async () => {
+                const ids = selectedRows.map((r: any) => r.id);
+                const res = await bulkUpdateBlogPosts(ids, 'delete');
+                if (res?.error) toast.error(res.error);
+                else {
+                  toast.success(`Archived ${ids.length} posts`);
+                  fetchBlogPosts();
+                }
+              }}
+              className="px-2.5 py-1 bg-rose-600/20 text-rose-400 border border-rose-500/20 rounded-lg text-xs font-medium hover:bg-rose-600/30 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        )}
+        emptyStateTitle={emptyState.title}
+        emptyStateDescription={emptyState.description}
         emptyStateAction={
           <Link
             href="/dashboard/blog/new"

@@ -25,14 +25,15 @@ export default function RelatedArticles({ currentSlug }: { currentSlug: string }
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
           {relatedPosts.map((blog, index) => (
-            <div 
+            <Link
               key={index}
-              className="flex flex-col bg-white border border-gray-100 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group"
+              href={`/blog/${blog.slug}`}
+              className="flex flex-col bg-white border border-gray-100 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer"
             >
               <div className="relative w-full aspect-16/11 bg-gray-50 overflow-hidden">
                 <Image 
-                  src={blog.image}
-                  alt={blog.title}
+                  src={blog.image || '/images/default.jpg'}
+                  alt={blog.title || 'Related Article'}
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
@@ -42,22 +43,17 @@ export default function RelatedArticles({ currentSlug }: { currentSlug: string }
               </div>
               
               <div className="p-8 flex flex-col grow">
-                <Link href={`/blog/${blog.slug}`}>
-                  <h3 className="text-xl font-bold text-[#1A1A1A] mb-4 line-clamp-3 group-hover:text-[#5EB3C3] transition-colors leading-snug">
-                    {blog.title}
-                  </h3>
-                </Link>
+                <h3 className="text-xl font-bold text-[#1A1A1A] mb-4 line-clamp-3 group-hover:text-[#5EB3C3] transition-colors leading-snug">
+                  {blog.title}
+                </h3>
                 <p className="text-[#6B7280] text-sm leading-relaxed mb-8 line-clamp-3">
                   {blog.excerpt}
                 </p>
-                <Link 
-                  href={`/blog/${blog.slug}`} 
-                  className="mt-auto text-xs font-bold uppercase tracking-widest text-[#111827] hover:text-[#5EB3C3] transition-colors"
-                >
+                <span className="mt-auto text-xs font-bold uppercase tracking-widest text-[#111827] group-hover:text-[#5EB3C3] transition-colors">
                   READ MORE »
-                </Link>
+                </span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 

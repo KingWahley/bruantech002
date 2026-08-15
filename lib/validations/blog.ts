@@ -11,7 +11,7 @@ export const blogPostSchema = z.object({
   authorAvatar: z.string().optional(),
   readTime: z.string().optional(),
   content: z.union([z.array(z.any()), z.string()]).optional(),
-  status: z.enum(['draft', 'published', 'scheduled', 'archived']).optional(),
+  status: z.enum(['draft', 'published']).optional(),
   featured: z.boolean().optional(),
   meta_title: z.string().optional(),
   meta_description: z.string().optional(),
